@@ -15,9 +15,120 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
+  ubuntu:
+    name: Build Ubuntu Debian package
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+            os: [ubuntu-20.04, ubuntu-22.04]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.8'
+
+      - name: Install prereqs
+        run: |
+          sudo apt install -y libegl-dev libxcb-keysyms1 libxcb-randr0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-shape0 libxcb-xkb1 libxcb-render-util0
+
+      - name: Setup Env Vars
+        run: |
+          echo "BUILD_DIR=build" >> $GITHUB_ENV
+          export VER="$(cat info.py | grep -w version | awk -F'"' '$0=$2')"
+          export PROJ_NAME="$(cat info.py | grep -w name | awk -F'"' '$0=$2')"
+          export PROJ_MOD="$(cat info.py | grep -w module_name | awk -F'"' '$0=$2')"
+          export MAIN_FILE="$(cat info.py | grep -w main_file | awk -F'"' '$0=$2')"
+          export BUNDLE_ID="$(cat info.py | grep -w bundle_identifier | awk -F'"' '$0=$2')"
+          export EMAIL="$(cat info.py | grep -w email | awk -F'"' '$0=$2')"
+          export DESCRIPTION="$(cat info.py | grep -w description | awk -F'"' '$0=$2')"
+          echo "VER=$VER" >> $GITHUB_ENV
+          echo "DESCRIPTION=$DESCRIPTION" >> $GITHUB_ENV
+          echo "PROJECT_NAME=$PROJ_NAME" >> $GITHUB_ENV
+          echo "PROJ_DIR=$PROJ_MOD" >> $GITHUB_ENV
+          echo "PROJ_PATH=$PROJ_MOD" >> $GITHUB_ENV
+          echo "PROJ_MOD=$PROJ_MOD" >> $GITHUB_ENV
+          echo "MAIN_FILE=$MAIN_FILE" >> $GITHUB_ENV
+          echo "BUNDLE_ID=$BUNDLE_ID" >> $GITHUB_ENV
+          echo "EMAIL=$EMAIL" >> $GITHUB_ENV
+
+      - name: Check Python install
+        run: |
+          pip3 install --upgrade pip
+          python3 -m venv venv
+          source venv/bin/activate
+
+          which python3
+          python3 --version
+          which pip3
+          pip3 --version
+          file python3
+
+      - name: Install Python dependencies
+        run: |
+          source venv/bin/activate
+          pip3 install -U pip setuptools wheel certifi
+          pip3 install -r requirements.txt
+          pip3 install py2app
+          PYINSTALLER_COMPILE_BOOTLOADER=1 MACOSX_DEPLOYMENT_TARGET=10.9 pip3 install https://github.com/pyinstaller/pyinstaller/tarball/develop --no-binary :all:
+
+      - name: Check Python dependencies
+        run: |
+          source venv/bin/activate
+          python3 -c "from PySide6 import __version__; print(__version__)"
+          python3 -c "from PySide6.QtCore import __version__; print(__version__)"
+          python3 -c "from PySide6.QtCore import QLibraryInfo; print(QLibraryInfo.location(QLibraryInfo.LibrariesPath))"
+          python3 -c "import ssl; print(ssl)"
+          python3 -c "from py2app.recipes import pyside6"
+          python3 -c 'from distutils.sysconfig import get_config_var; print(get_config_var("LDLIBRARY"))'
+
+      - name: Setup Deb
+        run: |
+          source venv/bin/activate
+          pyinstaller -w --noconfirm --hidden-import PySide6 \
+               --add-data "${{ env.PROJ_DIR }}/resources:." \
+               --icon "${{ env.PROJ_DIR }}/resources/icon.png" \
+               --hidden-import configobj \
+               --distpath "${{ env.BUILD_DIR }}/ProjectLinux" \
+               --onefile -n "${{ env.PROJ_MOD }}-bin" "${{ env.PROJ_DIR }}/${{ env.MAIN_FILE }}"
+          cp "${{ env.BUILD_DIR }}/ProjectLinux/${{ env.PROJ_MOD }}-bin" .
+          ls -al "${{ env.BUILD_DIR }}/ProjectLinux"
+          ci/deb-script.sh
+
+      - uses: jiro4989/build-deb-action@v2
+        with:
+          package: ${{ env.PROJ_PATH }}
+          file_name: ${{ env.PROJ_PATH }}_${{ env.VER }}.deb
+          package_root: .debpkg
+          maintainer: ${{ env.EMAIL }}
+          version: ${{ env.VER }} # refs/tags/v*.*.*
+          arch: 'all'
+          depends: 'libc6 (>= 2.2.1)'
+          desc: "${{ env.DESCRIPTION }}"
+
+      - name: Deploy bin
+        uses: actions/upload-artifact@v2.0.1
+        with:
+          name: ${{ env.PROJ_PATH }}_${{ env.VER }}
+          path: |
+            ${{ env.PROJ_MOD }}-bin
+
+      - name: Deploy deb
+        uses: actions/upload-artifact@v2.0.1
+        with:
+          name: ${{ env.PROJ_PATH }}_${{ env.VER }}.deb
+          path: |
+            ${{ env.PROJ_PATH }}_*.deb
+  # windows:
+  #   name: Build for Windows
+
   macos:
     name: Build for macOS
-    runs-on: [macos-11, macos-12]
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+            os: [macos-11, macos-12]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -34,44 +145,53 @@ jobs:
       - name: Setup Env Vars
         run: |
           echo "BUILD_DIR=build" >> $GITHUB_ENV
-          export VER="$(cat info.py | awk '/version/ {gsub("\047", "", $3); print $NF}')"
-          export PROJ_NAME="$(cat info.py | awk '/name/ {gsub("\047", "", $3); print $NF}')"
-          export PROJ_MOD="$(cat info.py | awk '/module_name/ {gsub("\047", "", $3); print $NF}')"
-          export MAIN_FILE="$(cat info.py | awk '/main_file/ {gsub("\047", "", $3); print $NF}')"
-          export BUNDLE_ID="$(cat info.py | awk '/bundle_identifier/ {gsub("\047", "", $3); print $NF}')"
+          export VER="$(cat info.py | grep -w version | awk -F'"' '$0=$2')"
+          export PROJ_NAME="$(cat info.py | grep -w name | awk -F'"' '$0=$2')"
+          export PROJ_MOD="$(cat info.py | grep -w module_name | awk -F'"' '$0=$2')"
+          export MAIN_FILE="$(cat info.py | grep -w main_file | awk -F'"' '$0=$2')"
+          export BUNDLE_ID="$(cat info.py | grep -w bundle_identifier | awk -F'"' '$0=$2')"
+          export DIST_DIR="dist_actions"
           echo "VER=$VER" >> $GITHUB_ENV
           echo "PROJECT_NAME=$PROJ_NAME" >> $GITHUB_ENV
           echo "PROJ_DIR=$PROJ_MOD" >> $GITHUB_ENV
           echo "MAIN_FILE=$MAIN_FILE" >> $GITHUB_ENV
           echo "BUNDLE_ID=$BUNDLE_ID" >> $GITHUB_ENV
+          echo "DIST_DIR=$DIST_DIR" >> $GITHUB_ENV
+
       - name: Check Python install
         run: |
+          pip3 install --upgrade pip
+          python3 -m venv venv
+          source venv/bin/activate
           which python3
           python3 --version
           which pip3
           pip3 --version
           file python3
+
       - name: Install Python dependencies
         run: |
-          pip3 install --upgrade pip
-          python3 -m venv venv
           source venv/bin/activate
           pip3 install -U pip setuptools wheel certifi
           pip3 install -r requirements.txt
           pip3 install py2app
           PYINSTALLER_COMPILE_BOOTLOADER=1 MACOSX_DEPLOYMENT_TARGET=10.9 pip3 install https://github.com/pyinstaller/pyinstaller/tarball/develop --no-binary :all:
+
       - name: Install universal2 dependencies
         env:
           CFLAGS: -arch x86_64 -arch arm64
           ARCHFLAGS: -arch x86_64 -arch arm64
         run: |
+          source venv/bin/activate
           pip3 uninstall cffi -y
           pip3 install --no-binary :all: cffi
           pip3 uninstall cryptography -y
           pip3 download --platform macosx_10_10_universal2 --only-binary :all: --no-deps --dest . cryptography
           pip3 install --no-cache-dir --no-index --find-links . cryptography
+
       - name: Check Python dependencies
         run: |
+          source venv/bin/activate
           python3 -c "from PySide6 import __version__; print(__version__)"
           python3 -c "from PySide6.QtCore import __version__; print(__version__)"
           python3 -c "from PySide6.QtCore import QLibraryInfo; print(QLibraryInfo.location(QLibraryInfo.LibrariesPath))"
@@ -80,19 +200,25 @@ jobs:
           python3 -c 'from distutils.sysconfig import get_config_var; print(get_config_var("LDLIBRARY"))'
       - name: Build
         run: |
-          python3 buildPy2app.py py2app
-          pyinstaller -w --hidden-import PySide6 \
-               --add-data "${{ env.PROJ_DIR }}/resources" \
+          source venv/bin/activate
+          # python3 buildPy2app.py py2app
+          pyinstaller -w --noconfirm --hidden-import PySide6 \
+               --add-data "${{ env.PROJ_DIR }}/resources:." \
                --icon "${{ env.PROJ_DIR }}/resources/icon.icns" \
                --target-architecture universal2 \
-               --osx-bundle-identifier "pl.${{ env.PROJ_DIR }}.${{ env.PROJ_DIR }}"
+               --osx-bundle-identifier "${{ env.BUNDLE_ID }}" \
                --hidden-import pkg_resources \
-               --distpath "${{ env.BUILD_DIR }}/" \
+               --distpath "${{ env.BUILD_DIR }}/ProjectMac" \
                --onefile -n "${{ env.PROJECT_NAME }}" "${{ env.PROJ_DIR }}/${{ env.MAIN_FILE }}"
+          ls -al "${{ env.BUILD_DIR }}/ProjectMac"
+          zip -r "${{ env.PROJECT_NAME }}-${{ env.VER }}.zip" "${{ env.BUILD_DIR }}/ProjectMac/${{ env.PROJECT_NAME }}.app"
+
       - name: Prepare for deployment
         run: |
-          mkdir "${{ env.BUILD_DIR }}/"
+          source venv/bin/activate
+          mkdir -p "${{ env.DIST_DIR }}/dmg"
           test -f "${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg" && rm "${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg"
+          cp -r "${{ env.BUILD_DIR }}/ProjectMac/${{ env.PROJECT_NAME }}.app" "${{ env.DIST_DIR}}/dmg"
           create-dmg \
             --volname "${{ env.PROJECT_NAME }}-${{ env.VER }} Installer" \
             --volicon "${{ env.PROJ_DIR }}/resources/icon.icns" \
@@ -103,13 +229,20 @@ jobs:
             --hide-extension "${{ env.PROJECT_NAME }}.app" \
             --app-drop-link 600 185 \
             "${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg" \
-            "${{ env.BUILD_DIR }}/"
-          ci/macos-deploy.sh
+            "${{ env.DIST_DIR }}/dmg/"
           ls -al dist_actions
-      - name: Deploy
-        uses: actions/upload-artifact@v2
+
+      - name: Deploy Zip
+        uses: actions/upload-artifact@v2.0.1
+        with:
+          name: ${{ env.PROJECT_NAME }}-${{ env.VER }}.zip
+          path: |
+            ${{ env.PROJECT_NAME }}-${{ env.VER }}.zip
+
+      - name: Deploy DMG
+        uses: actions/upload-artifact@v2.0.1
         with:
           name: ${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg
           path: |
-            dist_actions/${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg
+            ${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg
 

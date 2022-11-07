@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+	<id>$BUNDLE_ID</id>
+	<metadata_license>$METADATA_LICENSE</metadata_license>
+	<project_license>$PROJECT_LICENSE</project_license>
+	<name>$PROJ_NAME</name>
+	<summary>$SUMMARY</summary>
+	<description>
+		<p>$DESCRIPTION</p>
+	</description>
+	<launchable type="desktop-id">$BUNDLE_ID.desktop</launchable>
+	<url type="homepage">$HOMEPAGE</url>
+	<screenshots>
+		<screenshot type="default">
+			<image>$SCREENSHOT</image>
+		</screenshot>
+	</screenshots>
+	<provides>
+		<id>$BUNDLE_ID.desktop</id>
+	</provides>
+</component>

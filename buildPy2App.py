@@ -6,6 +6,7 @@ module_name = "project"
 name = "Project"
 version = ""
 main_file = "main.py"
+bundle_identifier = "com.project.Project"
 
 # Overrides the above
 exec(open("info.py").read())
@@ -29,7 +30,7 @@ OPTIONS = {
     'plist': {
         'CFBundleName': name,
         'CFBundleShortVersionString': version,
-        'CFBundleIdentifier': f'pl.{module_name}.{name}',
+        'CFBundleIdentifier': bundle_identifier,
         'LSMinimumSystemVersion': '10.12.0',
         'NSHumanReadableCopyright': f'Copyright © {datetime.now().year} {name} All Rights Reserved',
     }

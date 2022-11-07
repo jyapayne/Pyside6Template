@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=$PROJ_NAME
+Comment=$DESCRIPTION
+Exec=$PROJ_MOD %u
+Type=$APP_TYPE
+Icon=icon
+Categories=$CATEGORIES;
+MimeType=$MIME_TYPES
+Keywords=$PROJ_MOD;$KEYWORDS
