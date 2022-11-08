@@ -220,7 +220,7 @@ jobs:
                --distpath "${{ env.BUILD_DIR }}/ProjectMac" \
                -n "${{ env.PROJECT_NAME }}" pyinstaller.py
           ls -al "${{ env.BUILD_DIR }}/ProjectMac"
-          cp -r "${{ env.BUILD_DIR }}/ProjectMac/${{ env.PROJECT_NAME }}.app" .
+          cp -r "${{ env.BUILD_DIR }}/ProjectMac/${{ env.PROJECT_NAME }}.app" "${{ env.PROJECT_NAME }}.app"
           zip -r "${{ env.PROJECT_NAME }}-${{ env.VER }}.zip" "${{ env.PROJECT_NAME }}.app"
 
       - name: Prepare for deployment
@@ -245,14 +245,14 @@ jobs:
       - name: Deploy Zip
         uses: actions/upload-artifact@v2.0.1
         with:
-          name: ${{ env.PROJECT_NAME }}-${{ env.VER }}-MacOS
+          name: ${{ env.PROJECT_NAME }}-${{ env.VER }}-${{ matrix.os }}-zip
           path: |
             ${{ env.PROJECT_NAME }}-${{ env.VER }}.zip
 
       - name: Deploy DMG
         uses: actions/upload-artifact@v2.0.1
         with:
-          name: ${{ env.PROJECT_NAME }}_${{ env.VER }}-MacOS
+          name: ${{ env.PROJECT_NAME }}_${{ env.VER }}-${{ matrix.os}}-dmg
           path: |
             ${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg
 

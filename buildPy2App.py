@@ -18,7 +18,7 @@ DATA_FILES = [
 ]
 OPTIONS = {
     'iconfile': module_name + '/resources/icon.icns',
-    'extra_scripts': 'info.py',
+    'extra_scripts': module_name + '/info.py',
     'includes': {'PySide6.QtCore', 'PySide6.QtUiTools', 'PySide6.QtGui', 'PySide6.QtWidgets', 'certifi', 'cffi', 'pem'},
     'excludes': {'tkinter'},
     'qt_plugins': [
