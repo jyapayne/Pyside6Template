@@ -218,16 +218,17 @@ jobs:
                --osx-bundle-identifier "${{ env.BUNDLE_ID }}" \
                --hidden-import pkg_resources \
                --distpath "${{ env.BUILD_DIR }}/ProjectMac" \
-               -n "${{ env.PROJECT_NAME }}" pyinstaller.py
+               --onefile -n "${{ env.PROJECT_NAME }}" pyinstaller.py
           ls -al "${{ env.BUILD_DIR }}/ProjectMac"
-          zip -r "${{ env.PROJECT_NAME }}-${{ env.VER }}.zip" "${{ env.BUILD_DIR }}/ProjectMac/${{ env.PROJECT_NAME }}.app"
+          cp -r "${{ env.BUILD_DIR }}/ProjectMac/${{ env.PROJECT_NAME }}.app" "${{ env.PROJECT_NAME }}.app"
+          zip -r "${{ env.PROJECT_NAME }}-${{ env.VER }}.zip" "${{ env.PROJECT_NAME }}.app"
 
       - name: Prepare for deployment
         run: |
           source venv/bin/activate
           mkdir -p "${{ env.DIST_DIR }}/dmg"
           test -f "${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg" && rm "${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg"
-          cp -r "${{ env.BUILD_DIR }}/ProjectMac/${{ env.PROJECT_NAME }}.app" "${{ env.DIST_DIR}}/dmg"
+          cp -r "${{ env.PROJECT_NAME }}.app" "${{ env.DIST_DIR}}/dmg"
           create-dmg \
             --volname "${{ env.PROJECT_NAME }}-${{ env.VER }} Installer" \
             --volicon "${{ env.PROJ_DIR }}/resources/icon.icns" \
