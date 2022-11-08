@@ -111,14 +111,14 @@ jobs:
           desc: "${{ env.DESCRIPTION }}"
 
       - name: Deploy bin
-        uses: actions/upload-artifact@v2.0.1
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PROJ_PATH }}_${{ env.VER }}-${{ matrix.os }}-bin
           path: |
             ${{ env.PROJ_MOD }}-bin
 
       - name: Deploy deb
-        uses: actions/upload-artifact@v2.0.1
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PROJ_PATH }}_${{ env.VER }}-${{ matrix.os }}-deb
           path: |
@@ -218,9 +218,10 @@ jobs:
                --osx-bundle-identifier "${{ env.BUNDLE_ID }}" \
                --hidden-import pkg_resources \
                --distpath "${{ env.BUILD_DIR }}/ProjectMac" \
-               --onefile -n "${{ env.PROJECT_NAME }}" pyinstaller.py
+               -n "${{ env.PROJECT_NAME }}" pyinstaller.py
           ls -al "${{ env.BUILD_DIR }}/ProjectMac"
           cp -r "${{ env.BUILD_DIR }}/ProjectMac/${{ env.PROJECT_NAME }}.app" "${{ env.PROJECT_NAME }}.app"
+          python3 ci/codesign.py "${{ env.PROJECT_NAME }}.app"
           zip -r "${{ env.PROJECT_NAME }}-${{ env.VER }}.zip" "${{ env.PROJECT_NAME }}.app"
 
       - name: Prepare for deployment
@@ -243,14 +244,14 @@ jobs:
           ls -al dist_actions
 
       - name: Deploy Zip
-        uses: actions/upload-artifact@v2.0.1
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PROJECT_NAME }}-${{ env.VER }}-${{ matrix.os }}-zip
           path: |
             ${{ env.PROJECT_NAME }}-${{ env.VER }}.zip
 
       - name: Deploy DMG
-        uses: actions/upload-artifact@v2.0.1
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PROJECT_NAME }}_${{ env.VER }}-${{ matrix.os}}-dmg
           path: |
