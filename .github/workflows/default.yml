@@ -102,7 +102,7 @@ jobs:
 
       - uses: jiro4989/build-deb-action@v2
         with:
-          package: ${{ env.PROJ_PATH }}-${{ env.VER }}
+          package: ${{ env.PROJ_PATH }}-${{ env.VER }}-${{ matrix.os }}-deb
           package_root: .debpkg
           maintainer: ${{ env.EMAIL }}
           version: ${{ env.VER }} # refs/tags/v*.*.*
@@ -122,7 +122,7 @@ jobs:
         with:
           name: ${{ env.PROJ_PATH }}_${{ env.VER }}-${{ matrix.os }}-deb
           path: |
-            ${{ env.PROJ_PATH }}_*.deb
+            ./*.deb
   # windows:
   #   name: Build for Windows
 
