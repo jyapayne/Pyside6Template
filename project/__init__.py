@@ -1,4 +1,4 @@
-from .. import info
+from . import info
 
 version = info.version
 name = info.name

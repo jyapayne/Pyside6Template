@@ -23,7 +23,7 @@ jobs:
             os: [ubuntu-20.04, ubuntu-22.04]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - uses: actions/setup-python@v4
         with:
@@ -36,22 +36,26 @@ jobs:
       - name: Setup Env Vars
         run: |
           echo "BUILD_DIR=build" >> $GITHUB_ENV
-          export VER="$(cat info.py | grep -w version | awk -F'"' '$0=$2')"
-          export PROJ_NAME="$(cat info.py | grep -w name | awk -F'"' '$0=$2')"
-          export PROJ_MOD="$(cat info.py | grep -w module_name | awk -F'"' '$0=$2')"
-          export MAIN_FILE="$(cat info.py | grep -w main_file | awk -F'"' '$0=$2')"
-          export BUNDLE_ID="$(cat info.py | grep -w bundle_identifier | awk -F'"' '$0=$2')"
-          export EMAIL="$(cat info.py | grep -w email | awk -F'"' '$0=$2')"
-          export DESCRIPTION="$(cat info.py | grep -w description | awk -F'"' '$0=$2')"
+          FILE_LOC=$(find . -name info.py)
+          export VER="$(cat $FILE_LOC | grep -w version | awk -F'"' '$0=$2')"
+          export PROJ_NAME="$(cat $FILE_LOC | grep -w name | awk -F'"' '$0=$2')"
+          export PROJ_MOD="$(cat $FILE_LOC | grep -w module_name | awk -F'"' '$0=$2')"
+          export MAIN_FILE="$(cat $FILE_LOC | grep -w main_file | awk -F'"' '$0=$2')"
+          export MAIN_MOD="$(cat $FILE_LOC | grep -w main_module | awk -F'"' '$0=$2')"
+          export BUNDLE_ID="$(cat $FILE_LOC | grep -w bundle_identifier | awk -F'"' '$0=$2')"
+          export EMAIL="$(cat $FILE_LOC | grep -w email | awk -F'"' '$0=$2')"
+          export DESCRIPTION="$(cat $FILE_LOC | grep -w description | awk -F'"' '$0=$2')"
           echo "VER=$VER" >> $GITHUB_ENV
           echo "DESCRIPTION=$DESCRIPTION" >> $GITHUB_ENV
           echo "PROJECT_NAME=$PROJ_NAME" >> $GITHUB_ENV
           echo "PROJ_DIR=$PROJ_MOD" >> $GITHUB_ENV
           echo "PROJ_PATH=$PROJ_MOD" >> $GITHUB_ENV
           echo "PROJ_MOD=$PROJ_MOD" >> $GITHUB_ENV
+          echo "MAIN_MOD=$MAIN_MOD" >> $GITHUB_ENV
           echo "MAIN_FILE=$MAIN_FILE" >> $GITHUB_ENV
           echo "BUNDLE_ID=$BUNDLE_ID" >> $GITHUB_ENV
           echo "EMAIL=$EMAIL" >> $GITHUB_ENV
+          cat > pyinstaller.py <(envsubst < pyinstallertemplate.py)
 
       - name: Check Python install
         run: |
@@ -91,15 +95,14 @@ jobs:
                --icon "${{ env.PROJ_DIR }}/resources/icon.png" \
                --hidden-import configobj \
                --distpath "${{ env.BUILD_DIR }}/ProjectLinux" \
-               --onefile -n "${{ env.PROJ_MOD }}-bin" "${{ env.PROJ_DIR }}/${{ env.MAIN_FILE }}"
+               --onefile -n "${{ env.PROJ_MOD }}-bin" pyinstaller.py
           cp "${{ env.BUILD_DIR }}/ProjectLinux/${{ env.PROJ_MOD }}-bin" .
           ls -al "${{ env.BUILD_DIR }}/ProjectLinux"
           ci/deb-script.sh
 
       - uses: jiro4989/build-deb-action@v2
         with:
-          package: ${{ env.PROJ_PATH }}
-          file_name: ${{ env.PROJ_PATH }}_${{ env.VER }}.deb
+          package: ${{ env.PROJ_PATH }}_${{ env.VER }}
           package_root: .debpkg
           maintainer: ${{ env.EMAIL }}
           version: ${{ env.VER }} # refs/tags/v*.*.*
@@ -110,14 +113,14 @@ jobs:
       - name: Deploy bin
         uses: actions/upload-artifact@v2.0.1
         with:
-          name: ${{ env.PROJ_PATH }}_${{ env.VER }}
+          name: ${{ env.PROJ_PATH }}_${{ env.VER }}-Ubuntu
           path: |
             ${{ env.PROJ_MOD }}-bin
 
       - name: Deploy deb
         uses: actions/upload-artifact@v2.0.1
         with:
-          name: ${{ env.PROJ_PATH }}_${{ env.VER }}.deb
+          name: ${{ env.PROJ_PATH }}_${{ env.VER }}-Ubuntu
           path: |
             ${{ env.PROJ_PATH }}_*.deb
   # windows:
@@ -131,7 +134,7 @@ jobs:
             os: [macos-11, macos-12]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         
       - name: Setup Homebrew
         run: |
@@ -145,18 +148,24 @@ jobs:
       - name: Setup Env Vars
         run: |
           echo "BUILD_DIR=build" >> $GITHUB_ENV
-          export VER="$(cat info.py | grep -w version | awk -F'"' '$0=$2')"
-          export PROJ_NAME="$(cat info.py | grep -w name | awk -F'"' '$0=$2')"
-          export PROJ_MOD="$(cat info.py | grep -w module_name | awk -F'"' '$0=$2')"
-          export MAIN_FILE="$(cat info.py | grep -w main_file | awk -F'"' '$0=$2')"
-          export BUNDLE_ID="$(cat info.py | grep -w bundle_identifier | awk -F'"' '$0=$2')"
+          FILE_LOC=$(find . -name info.py)
+          export VER="$(cat $FILE_LOC | grep -w version | awk -F'"' '$0=$2')"
+          export PROJ_NAME="$(cat $FILE_LOC | grep -w name | awk -F'"' '$0=$2')"
+          export PROJ_MOD="$(cat $FILE_LOC | grep -w module_name | awk -F'"' '$0=$2')"
+          export MAIN_FILE="$(cat $FILE_LOC | grep -w main_file | awk -F'"' '$0=$2')"
+          export MAIN_MOD="$(cat $FILE_LOC | grep -w main_module | awk -F'"' '$0=$2')"
+          export BUNDLE_ID="$(cat $FILE_LOC | grep -w bundle_identifier | awk -F'"' '$0=$2')"
           export DIST_DIR="dist_actions"
           echo "VER=$VER" >> $GITHUB_ENV
           echo "PROJECT_NAME=$PROJ_NAME" >> $GITHUB_ENV
           echo "PROJ_DIR=$PROJ_MOD" >> $GITHUB_ENV
+          echo "PROJ_MOD=$PROJ_MOD" >> $GITHUB_ENV
           echo "MAIN_FILE=$MAIN_FILE" >> $GITHUB_ENV
+          echo "MAIN_MOD=$MAIN_MOD" >> $GITHUB_ENV
           echo "BUNDLE_ID=$BUNDLE_ID" >> $GITHUB_ENV
           echo "DIST_DIR=$DIST_DIR" >> $GITHUB_ENV
+
+          cat > pyinstaller.py <(envsubst < pyinstallertemplate.py)
 
       - name: Check Python install
         run: |
@@ -209,16 +218,17 @@ jobs:
                --osx-bundle-identifier "${{ env.BUNDLE_ID }}" \
                --hidden-import pkg_resources \
                --distpath "${{ env.BUILD_DIR }}/ProjectMac" \
-               --onefile -n "${{ env.PROJECT_NAME }}" "${{ env.PROJ_DIR }}/${{ env.MAIN_FILE }}"
+               -n "${{ env.PROJECT_NAME }}" pyinstaller.py
           ls -al "${{ env.BUILD_DIR }}/ProjectMac"
-          zip -r "${{ env.PROJECT_NAME }}-${{ env.VER }}.zip" "${{ env.BUILD_DIR }}/ProjectMac/${{ env.PROJECT_NAME }}.app"
+          cp -r "${{ env.BUILD_DIR }}/ProjectMac/${{ env.PROJECT_NAME }}.app" .
+          zip -r "${{ env.PROJECT_NAME }}-${{ env.VER }}.zip" "${{ env.PROJECT_NAME }}.app"
 
       - name: Prepare for deployment
         run: |
           source venv/bin/activate
           mkdir -p "${{ env.DIST_DIR }}/dmg"
           test -f "${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg" && rm "${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg"
-          cp -r "${{ env.BUILD_DIR }}/ProjectMac/${{ env.PROJECT_NAME }}.app" "${{ env.DIST_DIR}}/dmg"
+          cp -r "${{ env.PROJECT_NAME }}.app" "${{ env.DIST_DIR}}/dmg"
           create-dmg \
             --volname "${{ env.PROJECT_NAME }}-${{ env.VER }} Installer" \
             --volicon "${{ env.PROJ_DIR }}/resources/icon.icns" \
@@ -235,14 +245,14 @@ jobs:
       - name: Deploy Zip
         uses: actions/upload-artifact@v2.0.1
         with:
-          name: ${{ env.PROJECT_NAME }}-${{ env.VER }}.zip
+          name: ${{ env.PROJECT_NAME }}-${{ env.VER }}-MacOS
           path: |
             ${{ env.PROJECT_NAME }}-${{ env.VER }}.zip
 
       - name: Deploy DMG
         uses: actions/upload-artifact@v2.0.1
         with:
-          name: ${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg
+          name: ${{ env.PROJECT_NAME }}_${{ env.VER }}-MacOS
           path: |
             ${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg
 
