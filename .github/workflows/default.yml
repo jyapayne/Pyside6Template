@@ -218,7 +218,7 @@ jobs:
                --osx-bundle-identifier "${{ env.BUNDLE_ID }}" \
                --hidden-import pkg_resources \
                --distpath "${{ env.BUILD_DIR }}/ProjectMac" \
-               -n "${{ env.PROJECT_NAME }}" pyinstaller.py
+               --onefile -n "${{ env.PROJECT_NAME }}" pyinstaller.py
           ls -al "${{ env.BUILD_DIR }}/ProjectMac"
           cp -r "${{ env.BUILD_DIR }}/ProjectMac/${{ env.PROJECT_NAME }}.app" "${{ env.PROJECT_NAME }}.app"
           python3 ci/codesign.py "${{ env.PROJECT_NAME }}.app"
