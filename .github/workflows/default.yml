@@ -113,14 +113,14 @@ jobs:
       - name: Deploy bin
         uses: actions/upload-artifact@v2.0.1
         with:
-          name: ${{ env.PROJ_PATH }}_${{ env.VER }}-Ubuntu
+          name: ${{ env.PROJ_PATH }}_${{ env.VER }}-${{ matrix.os }}-bin
           path: |
             ${{ env.PROJ_MOD }}-bin
 
       - name: Deploy deb
         uses: actions/upload-artifact@v2.0.1
         with:
-          name: ${{ env.PROJ_PATH }}_${{ env.VER }}-Ubuntu
+          name: ${{ env.PROJ_PATH }}_${{ env.VER }}-${{ matrix.os }}-deb
           path: |
             ${{ env.PROJ_PATH }}_*.deb
   # windows:
