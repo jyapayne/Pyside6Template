@@ -102,7 +102,7 @@ jobs:
 
       - uses: jiro4989/build-deb-action@v2
         with:
-          package: ${{ env.PROJ_PATH }}_${{ env.VER }}
+          package: ${{ env.PROJ_PATH }}-${{ env.VER }}
           package_root: .debpkg
           maintainer: ${{ env.EMAIL }}
           version: ${{ env.VER }} # refs/tags/v*.*.*
