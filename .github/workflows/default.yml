@@ -97,8 +97,7 @@ jobs:
                --distpath "${{ env.BUILD_DIR }}" \
                -n "${{ env.PROJ_MOD }}" pyinstaller.py
           mv "${{ env.BUILD_DIR }}/${{ env.PROJ_MOD }}" "./${{ env.PROJ_MOD }}-tar"
-          ls -al
-          tar -czvf "${{ env.PROJ_MOD }}.tar.gz" "${{ env.PROJ_MOD }}-tar/*"
+          tar -czvf ${{ env.PROJ_MOD }}.tar.gz ${{ env.PROJ_MOD }}-tar/*
           ci/deb-script.sh
 
       - uses: jiro4989/build-deb-action@v2
