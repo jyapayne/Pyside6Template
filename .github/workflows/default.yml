@@ -96,7 +96,8 @@ jobs:
                --hidden-import configobj \
                --distpath "${{ env.BUILD_DIR }}" \
                -n "${{ env.PROJ_MOD }}" pyinstaller.py
-          mv "${{ env.BUILD_DIR }}/${{ env.PROJ_MOD }}" "${{ env.PROJ_MOD }}-tar"
+          mv "${{ env.BUILD_DIR }}/${{ env.PROJ_MOD }}" "./${{ env.PROJ_MOD }}-tar"
+          ls -al
           tar -czvf "${{ env.PROJ_MOD }}.tar.gz" "${{ env.PROJ_MOD }}-tar/*"
           ci/deb-script.sh
 
