@@ -96,8 +96,8 @@ jobs:
                --hidden-import configobj \
                --distpath "${{ env.BUILD_DIR }}" \
                -n "${{ env.PROJ_MOD }}" pyinstaller.py
-          mv "${{ env.BUILD_DIR }}/${{ env.PROJ_MOD }}" .
-          tar -czvf "${{ env.PROJ_MOD }}.tar.gz" "${{ env.PROJ_MOD }}"
+          mv "${{ env.BUILD_DIR }}/${{ env.PROJ_MOD }}" "${{ env.PROJ_MOD }}-tar"
+          tar -czvf "${{ env.PROJ_MOD }}.tar.gz" "${{ env.PROJ_MOD }}-tar/*"
           ci/deb-script.sh
 
       - uses: jiro4989/build-deb-action@v2
@@ -181,7 +181,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           source venv/bin/activate
-          pip3 install -U pip setuptools wheel py3clean
+          pip3 install -U pip setuptools wheel pyclean
           pip3 install -r requirements.txt
           pip3 install py2app
           PYINSTALLER_COMPILE_BOOTLOADER=1 MACOSX_DEPLOYMENT_TARGET=10.9 pip3 install https://github.com/pyinstaller/pyinstaller/tarball/develop --no-binary :all:

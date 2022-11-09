@@ -37,8 +37,8 @@ cat > $PROJ_MOD.desktop <(envsubst < $REPO_ROOT/ci/projectemplate.desktop)
 
 mkdir -p $PROJ_MOD/usr/bin/$PROJ_MOD-bin
 
-chmod +x $REPO_ROOT/$PROJ_MOD/$PROJ_MOD
-cp -r $REPO_ROOT/$PROJ_MOD/* $PROJ_MOD/usr/bin/$PROJ_MOD-bin/
+chmod +x $REPO_ROOT/$PROJ_MOD-tar/$PROJ_MOD
+cp -r $REPO_ROOT/$PROJ_MOD-tar/* $PROJ_MOD/usr/bin/$PROJ_MOD-bin/
 
 cat > $PROJ_MOD/usr/bin/$PROJ_MOD <(envsubst < $REPO_ROOT/ci/bintemplate)
 chmod +x $PROJ_MOD/usr/bin/$PROJ_MOD
