@@ -231,7 +231,7 @@ jobs:
           source venv/bin/activate
           mkdir -p "${{ env.DIST_DIR }}/dmg"
           test -f "${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg" && rm "${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg"
-          cp -Rfpv "${{ env.PROJECT_NAME }}.app" "${{ env.DIST_DIR}}/dmg/"
+          mv "${{ env.PROJECT_NAME }}.app" "${{ env.DIST_DIR}}/dmg/"
           create-dmg \
             --volname "${{ env.PROJECT_NAME }}-${{ env.VER }} Installer" \
             --volicon "${{ env.PROJ_DIR }}/resources/icon.icns" \
