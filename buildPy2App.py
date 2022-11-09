@@ -2,31 +2,25 @@ from setuptools import setup
 from glob import glob
 from datetime import datetime
 
-module_name = "project"
-name = "Project"
-version = ""
-main_file = "main.py"
-bundle_identifier = "com.project.Project"
+from project.info import main_module, name, version, main_file, bundle_identifier, module_name
 
-# Overrides the above
-exec(open("info.py").read())
-
-
-APP = [f'{module_name}/{main_file}']
+APP = [f'pyinstaller.py']
 DATA_FILES = [
-    ('resources', glob(module_name + '/resources/*.png') + glob(module_name + '/resources/*.rtf') + glob(module_name + '/resources/*.txt')),
+    ('resources', glob(module_name + '/resources/*')),
 ]
 OPTIONS = {
+    'arch': 'universal2',
+    'optimize': 2,
     'iconfile': module_name + '/resources/icon.icns',
-    'extra_scripts': module_name + '/info.py',
-    'includes': {'PySide6.QtCore', 'PySide6.QtUiTools', 'PySide6.QtGui', 'PySide6.QtWidgets', 'certifi', 'cffi', 'pem'},
-    'excludes': {'tkinter'},
+    'includes': {'PySide6.QtCore', 'PySide6.QtUiTools', 'PySide6.QtGui', 'PySide6.QtWidgets', 'certifi', },
+    'excludes': {'tkinter', "unittest"},
     'qt_plugins': [
         'platforms/libqcocoa.dylib',
         'platforms/libqminimal.dylib',
         'platforms/libqoffscreen.dylib',
         'styles/libqmacstyle.dylib'
     ],
+    'argv_emulation': True,
     'plist': {
         'CFBundleName': name,
         'CFBundleShortVersionString': version,

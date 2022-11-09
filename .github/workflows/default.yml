@@ -210,17 +210,19 @@ jobs:
       - name: Build
         run: |
           source venv/bin/activate
-          # python3 buildPy2app.py py2app
-          pyinstaller -w --noconfirm --hidden-import PySide6 \
-               --add-data "${{ env.PROJ_DIR }}/resources:." \
-               --icon "${{ env.PROJ_DIR }}/resources/icon.icns" \
-               --target-architecture universal2 \
-               --osx-bundle-identifier "${{ env.BUNDLE_ID }}" \
-               --hidden-import pkg_resources \
-               --distpath "${{ env.BUILD_DIR }}/ProjectMac" \
-               --onefile -n "${{ env.PROJECT_NAME }}" pyinstaller.py
-          ls -al "${{ env.BUILD_DIR }}/ProjectMac"
-          cp -r "${{ env.BUILD_DIR }}/ProjectMac/${{ env.PROJECT_NAME }}.app" "${{ env.PROJECT_NAME }}.app"
+          # py2app works better
+          python3 buildPy2app.py py2app
+          # pyinstaller -w --noconfirm --hidden-import PySide6 \
+          #      --add-data "${{ env.PROJ_DIR }}/resources:." \
+          #      --icon "${{ env.PROJ_DIR }}/resources/icon.icns" \
+          #      --target-architecture universal2 \
+          #      --osx-bundle-identifier "${{ env.BUNDLE_ID }}" \
+          #      --hidden-import pkg_resources \
+          #      --distpath "${{ env.BUILD_DIR }}/ProjectMac" \
+          #      --onefile -n "${{ env.PROJECT_NAME }}" pyinstaller.py
+          ls -al "dist/"
+          mv "dist/${{ env.PROJECT_NAME }}.app" "${{ env.PROJECT_NAME }}.app"
+          python3 ci/cleandist.py "${{ env.PROJECT_NAME }}.app"
           python3 ci/codesign.py "${{ env.PROJECT_NAME }}.app"
           zip -r "${{ env.PROJECT_NAME }}-${{ env.VER }}.zip" "${{ env.PROJECT_NAME }}.app"
 
