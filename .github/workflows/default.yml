@@ -231,7 +231,7 @@ jobs:
           source venv/bin/activate
           mkdir -p "${{ env.DIST_DIR }}/dmg"
           test -f "${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg" && rm "${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg"
-          cp -r "${{ env.PROJECT_NAME }}.app" "${{ env.DIST_DIR}}/dmg"
+          cp -rRfpv "${{ env.PROJECT_NAME }}.app" "${{ env.DIST_DIR}}/dmg/"
           create-dmg \
             --volname "${{ env.PROJECT_NAME }}-${{ env.VER }} Installer" \
             --volicon "${{ env.PROJ_DIR }}/resources/icon.icns" \
@@ -243,7 +243,7 @@ jobs:
             --app-drop-link 600 185 \
             "${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg" \
             "${{ env.DIST_DIR }}/dmg/"
-          ls -al dist_actions
+          ls -al ${{ env.DIST_DIR }}
 
       - name: Deploy Zip
         uses: actions/upload-artifact@v3
