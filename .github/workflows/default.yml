@@ -35,7 +35,7 @@ jobs:
 
       - name: Setup Env Vars
         run: |
-          echo "BUILD_DIR=build" >> $GITHUB_ENV
+          echo "BUILD_DIR=dist" >> $GITHUB_ENV
           FILE_LOC=$(find . -name info.py)
           export VER="$(cat $FILE_LOC | grep -w version | awk -F'"' '$0=$2')"
           export PROJ_NAME="$(cat $FILE_LOC | grep -w name | awk -F'"' '$0=$2')"
@@ -94,10 +94,10 @@ jobs:
                --add-data "${{ env.PROJ_DIR }}/resources:." \
                --icon "${{ env.PROJ_DIR }}/resources/icon.png" \
                --hidden-import configobj \
-               --distpath "${{ env.BUILD_DIR }}/ProjectLinux" \
-               --onefile -n "${{ env.PROJ_MOD }}-bin" pyinstaller.py
-          cp "${{ env.BUILD_DIR }}/ProjectLinux/${{ env.PROJ_MOD }}-bin" .
-          ls -al "${{ env.BUILD_DIR }}/ProjectLinux"
+               --distpath "${{ env.BUILD_DIR }}" \
+               -n "${{ env.PROJ_MOD }}" pyinstaller.py
+          mv "${{ env.BUILD_DIR }}/${{ env.PROJ_MOD }}" .
+          tar -czvf "${{ env.PROJ_MOD }}.tar.gz" "${{ env.PROJ_MOD }}"
           ci/deb-script.sh
 
       - uses: jiro4989/build-deb-action@v2
@@ -110,17 +110,17 @@ jobs:
           depends: 'libc6 (>= 2.2.1)'
           desc: "${{ env.DESCRIPTION }}"
 
-      - name: Deploy bin
+      - name: Deploy tar
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.PROJ_PATH }}_${{ env.VER }}-${{ matrix.os }}-bin
+          name: ${{ env.PROJ_PATH }}_${{ env.VER }}_${{ matrix.os }}-tar
           path: |
-            ${{ env.PROJ_MOD }}-bin
+            ${{ env.PROJ_MOD }}.tar.gz
 
       - name: Deploy deb
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.PROJ_PATH }}_${{ env.VER }}-${{ matrix.os }}-deb
+          name: ${{ env.PROJ_PATH }}_${{ env.VER }}_${{ matrix.os }}-deb
           path: |
             ./*.deb
   # windows:
@@ -147,7 +147,7 @@ jobs:
           echo "/Library/Frameworks/Python.framework/Versions/3.10/bin" >> $GITHUB_PATH
       - name: Setup Env Vars
         run: |
-          echo "BUILD_DIR=build" >> $GITHUB_ENV
+          echo "BUILD_DIR=dist" >> $GITHUB_ENV
           FILE_LOC=$(find . -name info.py)
           export VER="$(cat $FILE_LOC | grep -w version | awk -F'"' '$0=$2')"
           export PROJ_NAME="$(cat $FILE_LOC | grep -w name | awk -F'"' '$0=$2')"
@@ -181,7 +181,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           source venv/bin/activate
-          pip3 install -U pip setuptools wheel certifi
+          pip3 install -U pip setuptools wheel py3clean
           pip3 install -r requirements.txt
           pip3 install py2app
           PYINSTALLER_COMPILE_BOOTLOADER=1 MACOSX_DEPLOYMENT_TARGET=10.9 pip3 install https://github.com/pyinstaller/pyinstaller/tarball/develop --no-binary :all:
@@ -222,9 +222,11 @@ jobs:
           #      --onefile -n "${{ env.PROJECT_NAME }}" pyinstaller.py
           ls -al "dist/"
           mv "dist/${{ env.PROJECT_NAME }}.app" "${{ env.PROJECT_NAME }}.app"
+          # Clean the directory so it's not full of python bytecode
+          pyclean "${{ env.PROJECT_NAME }}.app"
           python3 ci/cleandist.py "${{ env.PROJECT_NAME }}.app"
           python3 ci/codesign.py "${{ env.PROJECT_NAME }}.app"
-          zip -r "${{ env.PROJECT_NAME }}-${{ env.VER }}.zip" "${{ env.PROJECT_NAME }}.app"
+          zip -ry "${{ env.PROJECT_NAME }}-${{ env.VER }}.zip" "${{ env.PROJECT_NAME }}.app"
 
       - name: Prepare for deployment
         run: |

@@ -35,14 +35,18 @@ pushd "$BUILD_DIR"
 cat > $PROJ_MOD.desktop <(envsubst < $REPO_ROOT/ci/projectemplate.desktop)
 
 
-mkdir -p $PROJ_MOD/usr/bin
+mkdir -p $PROJ_MOD/usr/bin/$PROJ_MOD-bin
 
-chmod +x $REPO_ROOT/$PROJ_MOD-bin
-cp $REPO_ROOT/$PROJ_MOD-bin $PROJ_MOD/usr/bin/$PROJ_MOD
+chmod +x $REPO_ROOT/$PROJ_MOD/$PROJ_MOD
+cp -r $REPO_ROOT/$PROJ_MOD/* $PROJ_MOD/usr/bin/$PROJ_MOD-bin/
+
+cat > $PROJ_MOD/usr/bin/$PROJ_MOD <(envsubst < $REPO_ROOT/ci/bintemplate)
+chmod +x $PROJ_MOD/usr/bin/$PROJ_MOD
 
 mkdir -p $PROJ_MOD/usr/share/applications
 mkdir -p $PROJ_MOD/usr/lib/$PROJ_MOD
-chmod +x $PROJ_MOD/usr/bin/$PROJ_MOD
+
 cp $PROJ_MOD.desktop $PROJ_MOD/usr/share/applications
 chmod +x $PROJ_MOD/usr/share/applications/$PROJ_MOD.desktop
+
 mkdir -p $PROJ_MOD/DEBIAN
