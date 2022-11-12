@@ -186,8 +186,8 @@ jobs:
           venv\Scripts\Activate.ps1
           python create_pyinstaller_file.py
           pyinstaller -w --noconfirm --hidden-import PySide6 `
-               --add-data ${{ env.PROJ_DIR }}\resources;. `
-               --icon ${{ env.PROJ_DIR }}\resources\icon.png `
+               --add-data "${{ env.PROJ_DIR }}\resources;." `
+               -i ${{ env.PROJ_DIR }}\resources\icon.png `
                --hidden-import pkg_resources `
                --workpath "${{ env.BUILD_DIR }}" `
                --distpath "${{ env.DIST_DIR }}" `
