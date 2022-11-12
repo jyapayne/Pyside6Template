@@ -36,7 +36,7 @@ jobs:
       - name: Setup Env Vars
         run: |
           echo "BUILD_DIR=build" >> $GITHUB_ENV
-          echo "DIST_DIR=build" >> $GITHUB_ENV
+          echo "DIST_DIR=dist" >> $GITHUB_ENV
           FILE_LOC=$(find . -name info.py)
           export VER="$(cat $FILE_LOC | grep -w version | awk -F'"' '$0=$2')"
           export PROJ_NAME="$(cat $FILE_LOC | grep -w name | awk -F'"' '$0=$2')"
@@ -159,9 +159,9 @@ jobs:
       - name: Check Python dependencies
         run: |
           venv\Scripts\Activate.ps1
-          python3 -c "from PySide6 import __version__; print(__version__)"
-          python3 -c "from PySide6.QtCore import __version__; print(__version__)"
-          python3 -c "from PySide6.QtCore import QLibraryInfo; print(QLibraryInfo.location(QLibraryInfo.LibrariesPath))"
+          python -c "from PySide6 import __version__; print(__version__)"
+          python -c "from PySide6.QtCore import __version__; print(__version__)"
+          python -c "from PySide6.QtCore import QLibraryInfo; print(QLibraryInfo.location(QLibraryInfo.LibrariesPath))"
 
       - name: Setup Env Vars
         run: |
@@ -232,7 +232,7 @@ jobs:
           export MAIN_FILE="$(cat $FILE_LOC | grep -w main_file | awk -F'"' '$0=$2')"
           export MAIN_MOD="$(cat $FILE_LOC | grep -w main_module | awk -F'"' '$0=$2')"
           export BUNDLE_ID="$(cat $FILE_LOC | grep -w bundle_identifier | awk -F'"' '$0=$2')"
-          export DIST_DIR="dist_actions"
+          export DIST_DIR="$DIST_DIR"
           echo "VER=$VER" >> $GITHUB_ENV
           echo "PROJECT_NAME=$PROJ_NAME" >> $GITHUB_ENV
           echo "PROJ_DIR=$PROJ_MOD" >> $GITHUB_ENV
