@@ -152,9 +152,9 @@ jobs:
       - name: Install Python dependencies
         run: |
           venv\Scripts\Activate.ps1
-          pip3 install -U setuptools wheel pip
-          pip3 install -r requirements.txt
-          pip3 install https://github.com/pyinstaller/pyinstaller/tarball/develop
+          pip install -U setuptools wheel pip
+          pip install -r requirements.txt
+          pip install https://github.com/pyinstaller/pyinstaller/tarball/develop
 
       - name: Check Python dependencies
         run: |
@@ -176,6 +176,7 @@ jobs:
           $MAIN_MOD = (findstr /b main_mod $FILE_LOC).split('"')[1]
           echo "PROJECT_NAME=$PROJ_NAME" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           echo "PROJ_MOD=$PROJ_MOD" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "PROJ_DIR=$PROJ_MOD" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           echo "MAIN_FILE=$MAIN_FILE" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           echo "MAIN_MOD=$MAIN_MOD" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           echo "DIST_DIR=$DIST_DIR" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
@@ -183,7 +184,7 @@ jobs:
       - name: Build
         run: |
           venv\Scripts\Activate.ps1
-          python3 create_pyinstaller_file.py
+          python create_pyinstaller_file.py
           pyinstaller -w --noconfirm --hidden-import PySide6 `
                --add-data ${{ env.PROJ_DIR }}\resources;. `
                --icon ${{ env.PROJ_DIR }}\resources\icon.png `
