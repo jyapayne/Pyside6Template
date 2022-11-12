@@ -179,7 +179,6 @@ jobs:
           echo "PROJ_DIR=$PROJ_MOD" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           echo "MAIN_FILE=$MAIN_FILE" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           echo "MAIN_MOD=$MAIN_MOD" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          echo "DIST_DIR=$DIST_DIR" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Build
         run: |
