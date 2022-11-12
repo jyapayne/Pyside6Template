@@ -232,7 +232,6 @@ jobs:
           export MAIN_FILE="$(cat $FILE_LOC | grep -w main_file | awk -F'"' '$0=$2')"
           export MAIN_MOD="$(cat $FILE_LOC | grep -w main_module | awk -F'"' '$0=$2')"
           export BUNDLE_ID="$(cat $FILE_LOC | grep -w bundle_identifier | awk -F'"' '$0=$2')"
-          export DIST_DIR="$DIST_DIR"
           echo "VER=$VER" >> $GITHUB_ENV
           echo "PROJECT_NAME=$PROJ_NAME" >> $GITHUB_ENV
           echo "PROJ_DIR=$PROJ_MOD" >> $GITHUB_ENV
@@ -240,7 +239,6 @@ jobs:
           echo "MAIN_FILE=$MAIN_FILE" >> $GITHUB_ENV
           echo "MAIN_MOD=$MAIN_MOD" >> $GITHUB_ENV
           echo "BUNDLE_ID=$BUNDLE_ID" >> $GITHUB_ENV
-          echo "DIST_DIR=$DIST_DIR" >> $GITHUB_ENV
 
       - name: Check Python install
         run: |
