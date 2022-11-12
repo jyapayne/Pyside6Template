@@ -125,6 +125,16 @@ jobs:
           name: ${{ env.PROJ_PATH }}_${{ env.VER }}_${{ matrix.os }}-deb
           path: |
             ./*.deb
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          generate_release_notes: true
+          files: |
+            ${{ env.PROJ_MOD }}.tar.gz
+            ./*.deb
+
   windows:
     name: Build for Windows
     runs-on: ${{ matrix.os }}
@@ -191,7 +201,7 @@ jobs:
                --workpath "${{ env.BUILD_DIR }}" `
                --distpath "${{ env.DIST_DIR }}" `
                --onedir -n "${{ env.PROJECT_NAME }}" pyinstaller.py
-          Compress-Archive -Path .\${{env.DIST_DIR}}\${{env.PROJECT_NAME}} -DestinationPath ${{env.PROJECT_NAME}}-${{ env.VER }}.zip
+          Compress-Archive -Path .\${{env.DIST_DIR}}\${{env.PROJECT_NAME}} -DestinationPath ${{env.PROJECT_NAME}}-${{ env.VER }}-windows-x64.zip
 
 
       - name: Deploy Zip
@@ -199,7 +209,15 @@ jobs:
         with:
           name: ${{ env.PROJECT_NAME }}_${{ env.VER }}-${{ matrix.os }}-zip
           path: |
-            ${{ env.PROJECT_NAME }}-${{ env.VER }}.zip
+            ${{ env.PROJECT_NAME }}-${{ env.VER }}-windows-x64.zip
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          generate_release_notes: true
+          files: |
+            ${{ env.PROJECT_NAME }}-${{ env.VER }}-windows-x64.zip
 
 
   macos:
@@ -299,7 +317,7 @@ jobs:
           pyclean "${{ env.PROJECT_NAME }}.app"
           python3 ci/cleandist.py "${{ env.PROJECT_NAME }}.app"
           python3 ci/codesign.py "${{ env.PROJECT_NAME }}.app"
-          zip -ry "${{ env.PROJECT_NAME }}_${{ env.VER }}.zip" "${{ env.PROJECT_NAME }}.app"
+          zip -ry "${{ env.PROJECT_NAME }}_${{ env.VER }}-macos-universal.zip" "${{ env.PROJECT_NAME }}.app"
 
       - name: Prepare for deployment
         run: |
@@ -316,7 +334,7 @@ jobs:
             --icon "${{ env.PROJECT_NAME }}.app" 200 190 \
             --hide-extension "${{ env.PROJECT_NAME }}.app" \
             --app-drop-link 600 185 \
-            "${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg" \
+            "${{ env.PROJECT_NAME }}_${{ env.VER }}-universal.dmg" \
             "${{ env.DIST_DIR }}/dmg/"
           ls -al ${{ env.DIST_DIR }}
 
@@ -325,12 +343,20 @@ jobs:
         with:
           name: ${{ env.PROJECT_NAME }}_${{ env.VER }}-${{ matrix.os }}-zip
           path: |
-            ${{ env.PROJECT_NAME }}_${{ env.VER }}.zip
+            ${{ env.PROJECT_NAME }}_${{ env.VER }}-macos-universal.zip
 
       - name: Deploy DMG
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.PROJECT_NAME }}_${{ env.VER }}-${{ matrix.os}}-dmg
           path: |
-            ${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg
+            ${{ env.PROJECT_NAME }}_${{ env.VER }}-universal.dmg
 
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          generate_release_notes: true
+          files: |
+            ${{ env.PROJECT_NAME }}_${{ env.VER }}-universal.dmg
+            ${{ env.PROJECT_NAME }}_${{ env.VER }}-macos-universal.zip
