@@ -152,7 +152,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           venv\Scripts\Activate.ps1
-          pip install -U setuptools wheel pip
+          pip install -U setuptools wheel pip pillow
           pip install -r requirements.txt
           pip install https://github.com/pyinstaller/pyinstaller/tarball/develop
 
