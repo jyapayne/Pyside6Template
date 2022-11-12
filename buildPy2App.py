@@ -1,8 +1,14 @@
 from setuptools import setup
 from glob import glob
 from datetime import datetime
+from package_alias import package
 
-from project.info import main_module, name, version, main_file, bundle_identifier, module_name
+info = package.info
+
+name = info.name
+version = info.version
+bundle_identifier = info.bundle_identifier
+module_name = info.module_name
 
 APP = [f'pyinstaller.py']
 DATA_FILES = [

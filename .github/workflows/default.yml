@@ -35,7 +35,8 @@ jobs:
 
       - name: Setup Env Vars
         run: |
-          echo "BUILD_DIR=dist" >> $GITHUB_ENV
+          echo "BUILD_DIR=build" >> $GITHUB_ENV
+          echo "DIST_DIR=build" >> $GITHUB_ENV
           FILE_LOC=$(find . -name info.py)
           export VER="$(cat $FILE_LOC | grep -w version | awk -F'"' '$0=$2')"
           export PROJ_NAME="$(cat $FILE_LOC | grep -w name | awk -F'"' '$0=$2')"
@@ -55,7 +56,6 @@ jobs:
           echo "MAIN_FILE=$MAIN_FILE" >> $GITHUB_ENV
           echo "BUNDLE_ID=$BUNDLE_ID" >> $GITHUB_ENV
           echo "EMAIL=$EMAIL" >> $GITHUB_ENV
-          cat > pyinstaller.py <(envsubst < pyinstallertemplate.py)
 
       - name: Check Python install
         run: |
@@ -90,13 +90,15 @@ jobs:
       - name: Setup Deb
         run: |
           source venv/bin/activate
+          python3 create_pyinstaller_file.py
           pyinstaller -w --noconfirm --hidden-import PySide6 \
                --add-data "${{ env.PROJ_DIR }}/resources:." \
                --icon "${{ env.PROJ_DIR }}/resources/icon.png" \
                --hidden-import configobj \
-               --distpath "${{ env.BUILD_DIR }}" \
+               --workpath "${{ env.BUILD_DIR }}" \
+               --distpath "${{ env.DIST_DIR }}" \
                -n "${{ env.PROJ_MOD }}" pyinstaller.py
-          mv "${{ env.BUILD_DIR }}/${{ env.PROJ_MOD }}" "./${{ env.PROJ_MOD }}-tar"
+          mv "${{ env.DIST_DIR }}/${{ env.PROJ_MOD }}" "./${{ env.PROJ_MOD }}-tar"
           tar -czvf ${{ env.PROJ_MOD }}.tar.gz ${{ env.PROJ_MOD }}-tar/*
           ci/deb-script.sh
 
@@ -123,8 +125,82 @@ jobs:
           name: ${{ env.PROJ_PATH }}_${{ env.VER }}_${{ matrix.os }}-deb
           path: |
             ./*.deb
-  # windows:
-  #   name: Build for Windows
+  windows:
+    name: Build for Windows
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+            os: [windows-2019]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.8'
+
+      - name: Check Python install
+        run: |
+          python -m venv venv
+          venv\Scripts\Activate.ps1
+          which python
+          python --version
+          python -c "import struct; print(struct.calcsize('P') * 8)"
+          which pip
+          pip --version
+
+      - name: Install Python dependencies
+        run: |
+          venv\Scripts\Activate.ps1
+          pip3 install -U setuptools wheel pip
+          pip3 install -r requirements.txt
+          pip3 install https://github.com/pyinstaller/pyinstaller/tarball/develop
+
+      - name: Check Python dependencies
+        run: |
+          venv\Scripts\Activate.ps1
+          python3 -c "from PySide6 import __version__; print(__version__)"
+          python3 -c "from PySide6.QtCore import __version__; print(__version__)"
+          python3 -c "from PySide6.QtCore import QLibraryInfo; print(QLibraryInfo.location(QLibraryInfo.LibrariesPath))"
+
+      - name: Setup Env Vars
+        run: |
+          $FILE_LOC = (Get-ChildItem -Path .\ -Filter info.py -Recurse -ErrorAction SilentlyContinue -Force | foreach {$_.FullName})
+          $VER = (findstr version $FILE_LOC).split("'")[1]
+          echo "VER=$VER" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "BUILD_DIR=build" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "DIST_DIR=dist" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $PROJ_NAME = (findstr /b name $FILE_LOC).split('"')[1]
+          $PROJ_MOD = (findstr /b module_name $FILE_LOC).split('"')[1]
+          $MAIN_FILE = (findstr /b main_file $FILE_LOC).split('"')[1]
+          $MAIN_MOD = (findstr /b main_mod $FILE_LOC).split('"')[1]
+          echo "PROJECT_NAME=$PROJ_NAME" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "PROJ_MOD=$PROJ_MOD" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "MAIN_FILE=$MAIN_FILE" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "MAIN_MOD=$MAIN_MOD" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "DIST_DIR=$DIST_DIR" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Build
+        run: |
+          venv\Scripts\Activate.ps1
+          python3 create_pyinstaller_file.py
+          pyinstaller -w --noconfirm --hidden-import PySide6 `
+               --add-data ${{ env.PROJ_DIR }}\resources;.\ `
+               --icon ${{ env.PROJ_DIR }}\resources\icon.png `
+               --hidden-import pkg_resources `
+               --workpath "${{ env.BUILD_DIR }}" `
+               --distpath "${{ env.DIST_DIR }}" `
+               --onedir -n "${{ env.PROJECT_NAME }}" pyinstaller.py
+          Compress-Archive -Path .\${{env.DIST_DIR}}\${{env.PROJECT_NAME}} -DestinationPath ${{env.PROJECT_NAME}}-${{ env.VER }}.zip
+
+
+      - name: Deploy Zip
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.PROJECT_NAME }}_${{ env.VER }}-${{ matrix.os }}-zip
+          path: |
+            ${{ env.PROJECT_NAME }}-${{ env.VER }}.zip
+
 
   macos:
     name: Build for macOS
@@ -147,7 +223,8 @@ jobs:
           echo "/Library/Frameworks/Python.framework/Versions/3.10/bin" >> $GITHUB_PATH
       - name: Setup Env Vars
         run: |
-          echo "BUILD_DIR=dist" >> $GITHUB_ENV
+          echo "BUILD_DIR=build" >> $GITHUB_ENV
+          echo "DIST_DIR=dist" >> $GITHUB_ENV
           FILE_LOC=$(find . -name info.py)
           export VER="$(cat $FILE_LOC | grep -w version | awk -F'"' '$0=$2')"
           export PROJ_NAME="$(cat $FILE_LOC | grep -w name | awk -F'"' '$0=$2')"
@@ -164,8 +241,6 @@ jobs:
           echo "MAIN_MOD=$MAIN_MOD" >> $GITHUB_ENV
           echo "BUNDLE_ID=$BUNDLE_ID" >> $GITHUB_ENV
           echo "DIST_DIR=$DIST_DIR" >> $GITHUB_ENV
-
-          cat > pyinstaller.py <(envsubst < pyinstallertemplate.py)
 
       - name: Check Python install
         run: |
@@ -210,6 +285,7 @@ jobs:
       - name: Build
         run: |
           source venv/bin/activate
+          python3 create_pyinstaller_file.py
           # py2app works better
           python3 buildPy2app.py py2app
           # pyinstaller -w --noconfirm --hidden-import PySide6 \
@@ -220,13 +296,12 @@ jobs:
           #      --hidden-import pkg_resources \
           #      --distpath "${{ env.BUILD_DIR }}/ProjectMac" \
           #      --onefile -n "${{ env.PROJECT_NAME }}" pyinstaller.py
-          ls -al "dist/"
-          mv "dist/${{ env.PROJECT_NAME }}.app" "${{ env.PROJECT_NAME }}.app"
+          mv "${{ env.DIST_DIR }}/${{ env.PROJECT_NAME }}.app" "${{ env.PROJECT_NAME }}.app"
           # Clean the directory so it's not full of python bytecode
           pyclean "${{ env.PROJECT_NAME }}.app"
           python3 ci/cleandist.py "${{ env.PROJECT_NAME }}.app"
           python3 ci/codesign.py "${{ env.PROJECT_NAME }}.app"
-          zip -ry "${{ env.PROJECT_NAME }}-${{ env.VER }}.zip" "${{ env.PROJECT_NAME }}.app"
+          zip -ry "${{ env.PROJECT_NAME }}_${{ env.VER }}.zip" "${{ env.PROJECT_NAME }}.app"
 
       - name: Prepare for deployment
         run: |
@@ -250,9 +325,9 @@ jobs:
       - name: Deploy Zip
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.PROJECT_NAME }}-${{ env.VER }}-${{ matrix.os }}-zip
+          name: ${{ env.PROJECT_NAME }}_${{ env.VER }}-${{ matrix.os }}-zip
           path: |
-            ${{ env.PROJECT_NAME }}-${{ env.VER }}.zip
+            ${{ env.PROJECT_NAME }}_${{ env.VER }}.zip
 
       - name: Deploy DMG
         uses: actions/upload-artifact@v3

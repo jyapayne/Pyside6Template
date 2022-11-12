@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QMainWindow, QApplication, QLabel, QVBoxLayout, QPushButton, QWidget
 from PySide6.QtGui import QIcon
-from . import name as project_name
+from . import info
+project_name = info.name
 
 import sys
 
