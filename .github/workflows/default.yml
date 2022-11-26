@@ -1,0 +1,362 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "master" branch
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  ubuntu:
+    name: Build Ubuntu Debian package
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+            os: [ubuntu-20.04, ubuntu-22.04]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.8'
+
+      - name: Install prereqs
+        run: |
+          sudo apt install -y libegl-dev libxcb-keysyms1 libxcb-randr0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-shape0 libxcb-xkb1 libxcb-render-util0
+
+      - name: Setup Env Vars
+        run: |
+          echo "BUILD_DIR=build" >> $GITHUB_ENV
+          echo "DIST_DIR=dist" >> $GITHUB_ENV
+          FILE_LOC=$(find . -name info.py)
+          export VER="$(cat $FILE_LOC | grep -w version | awk -F'"' '$0=$2')"
+          export PROJ_NAME="$(cat $FILE_LOC | grep -w name | awk -F'"' '$0=$2')"
+          export PROJ_MOD="$(cat $FILE_LOC | grep -w module_name | awk -F'"' '$0=$2')"
+          export MAIN_FILE="$(cat $FILE_LOC | grep -w main_file | awk -F'"' '$0=$2')"
+          export MAIN_MOD="$(cat $FILE_LOC | grep -w main_module | awk -F'"' '$0=$2')"
+          export BUNDLE_ID="$(cat $FILE_LOC | grep -w bundle_identifier | awk -F'"' '$0=$2')"
+          export EMAIL="$(cat $FILE_LOC | grep -w email | awk -F'"' '$0=$2')"
+          export DESCRIPTION="$(cat $FILE_LOC | grep -w description | awk -F'"' '$0=$2')"
+          echo "VER=$VER" >> $GITHUB_ENV
+          echo "DESCRIPTION=$DESCRIPTION" >> $GITHUB_ENV
+          echo "PROJECT_NAME=$PROJ_NAME" >> $GITHUB_ENV
+          echo "PROJ_DIR=$PROJ_MOD" >> $GITHUB_ENV
+          echo "PROJ_PATH=$PROJ_MOD" >> $GITHUB_ENV
+          echo "PROJ_MOD=$PROJ_MOD" >> $GITHUB_ENV
+          echo "MAIN_MOD=$MAIN_MOD" >> $GITHUB_ENV
+          echo "MAIN_FILE=$MAIN_FILE" >> $GITHUB_ENV
+          echo "BUNDLE_ID=$BUNDLE_ID" >> $GITHUB_ENV
+          echo "EMAIL=$EMAIL" >> $GITHUB_ENV
+
+      - name: Check Python install
+        run: |
+          pip3 install --upgrade pip
+          python3 -m venv venv
+          source venv/bin/activate
+
+          which python3
+          python3 --version
+          which pip3
+          pip3 --version
+          file python3
+
+      - name: Install Python dependencies
+        run: |
+          source venv/bin/activate
+          pip3 install -U pip setuptools wheel certifi
+          pip3 install -r requirements.txt
+          pip3 install py2app
+          PYINSTALLER_COMPILE_BOOTLOADER=1 MACOSX_DEPLOYMENT_TARGET=10.9 pip3 install https://github.com/pyinstaller/pyinstaller/tarball/develop --no-binary :all:
+
+      - name: Check Python dependencies
+        run: |
+          source venv/bin/activate
+          python3 -c "from PySide6 import __version__; print(__version__)"
+          python3 -c "from PySide6.QtCore import __version__; print(__version__)"
+          python3 -c "from PySide6.QtCore import QLibraryInfo; print(QLibraryInfo.location(QLibraryInfo.LibrariesPath))"
+          python3 -c "import ssl; print(ssl)"
+          python3 -c "from py2app.recipes import pyside6"
+          python3 -c 'from distutils.sysconfig import get_config_var; print(get_config_var("LDLIBRARY"))'
+
+      - name: Setup Deb
+        run: |
+          source venv/bin/activate
+          python3 create_pyinstaller_file.py
+          pyinstaller -w --noconfirm --hidden-import PySide6 \
+               --add-data "${{ env.PROJ_DIR }}/resources:." \
+               --icon "${{ env.PROJ_DIR }}/resources/icon.png" \
+               --hidden-import configobj \
+               --workpath "${{ env.BUILD_DIR }}" \
+               --distpath "${{ env.DIST_DIR }}" \
+               -n "${{ env.PROJ_MOD }}" pyinstaller.py
+          mv "${{ env.DIST_DIR }}/${{ env.PROJ_MOD }}" "./${{ env.PROJ_MOD }}-tar"
+          tar -czvf ${{ env.PROJ_MOD }}.tar.gz ${{ env.PROJ_MOD }}-tar/*
+          ci/deb-script.sh
+
+      - uses: jiro4989/build-deb-action@v2
+        with:
+          package: ${{ env.PROJ_PATH }}-${{ env.VER }}-${{ matrix.os }}-deb
+          package_root: .debpkg
+          maintainer: ${{ env.EMAIL }}
+          version: ${{ env.VER }} # refs/tags/v*.*.*
+          arch: 'all'
+          depends: 'libc6 (>= 2.2.1)'
+          desc: "${{ env.DESCRIPTION }}"
+
+      - name: Deploy tar
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.PROJ_PATH }}_${{ env.VER }}_${{ matrix.os }}-tar
+          path: |
+            ${{ env.PROJ_MOD }}.tar.gz
+
+      - name: Deploy deb
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.PROJ_PATH }}_${{ env.VER }}_${{ matrix.os }}-deb
+          path: |
+            ./*.deb
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          generate_release_notes: true
+          files: |
+            ${{ env.PROJ_MOD }}.tar.gz
+            ./*.deb
+
+  windows:
+    name: Build for Windows
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+            os: [windows-2019]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.8'
+
+      - name: Check Python install
+        run: |
+          python -m venv venv
+          venv\Scripts\Activate.ps1
+          which python
+          python --version
+          python -c "import struct; print(struct.calcsize('P') * 8)"
+          which pip
+          pip --version
+
+      - name: Install Python dependencies
+        run: |
+          venv\Scripts\Activate.ps1
+          pip install -U setuptools wheel pip pillow
+          pip install -r requirements.txt
+          pip install https://github.com/pyinstaller/pyinstaller/tarball/develop
+
+      - name: Check Python dependencies
+        run: |
+          venv\Scripts\Activate.ps1
+          python -c "from PySide6 import __version__; print(__version__)"
+          python -c "from PySide6.QtCore import __version__; print(__version__)"
+          python -c "from PySide6.QtCore import QLibraryInfo; print(QLibraryInfo.location(QLibraryInfo.LibrariesPath))"
+
+      - name: Setup Env Vars
+        run: |
+          $FILE_LOC = (Get-ChildItem -Path .\ -Filter info.py -Recurse -ErrorAction SilentlyContinue -Force | foreach {$_.FullName})
+          $VER = (findstr /b version $FILE_LOC).split('"')[1]
+          echo "VER=$VER" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "BUILD_DIR=build" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "DIST_DIR=dist" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $PROJ_NAME = (findstr /b name $FILE_LOC).split('"')[1]
+          $PROJ_MOD = (findstr /b module_name $FILE_LOC).split('"')[1]
+          $MAIN_FILE = (findstr /b main_file $FILE_LOC).split('"')[1]
+          $MAIN_MOD = (findstr /b main_mod $FILE_LOC).split('"')[1]
+          echo "PROJECT_NAME=$PROJ_NAME" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "PROJ_MOD=$PROJ_MOD" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "PROJ_DIR=$PROJ_MOD" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "MAIN_FILE=$MAIN_FILE" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "MAIN_MOD=$MAIN_MOD" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Build
+        run: |
+          venv\Scripts\Activate.ps1
+          python create_pyinstaller_file.py
+          pyinstaller -w --noconfirm --hidden-import PySide6 `
+               --add-data "${{ env.PROJ_DIR }}\resources;." `
+               -i ${{ env.PROJ_DIR }}\resources\icon.ico `
+               --hidden-import pkg_resources `
+               --workpath "${{ env.BUILD_DIR }}" `
+               --distpath "${{ env.DIST_DIR }}" `
+               --onedir -n "${{ env.PROJECT_NAME }}" pyinstaller.py
+          Compress-Archive -Path .\${{env.DIST_DIR}}\${{env.PROJECT_NAME}} -DestinationPath ${{env.PROJECT_NAME}}-${{ env.VER }}-windows-x64.zip
+
+
+      - name: Deploy Zip
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.PROJECT_NAME }}_${{ env.VER }}-${{ matrix.os }}-zip
+          path: |
+            ${{ env.PROJECT_NAME }}-${{ env.VER }}-windows-x64.zip
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          generate_release_notes: true
+          files: |
+            ${{ env.PROJECT_NAME }}-${{ env.VER }}-windows-x64.zip
+
+
+  macos:
+    name: Build for macOS
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+            os: [macos-11, macos-12]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        
+      - name: Setup Homebrew
+        run: |
+          NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          brew install create-dmg
+      - name: Setup Python
+        run: |
+          wget https://www.python.org/ftp/python/3.10.8/python-3.10.8-macos11.pkg
+          sudo installer -verbose -pkg ./python-3*.pkg -target /
+          echo "/Library/Frameworks/Python.framework/Versions/3.10/bin" >> $GITHUB_PATH
+      - name: Setup Env Vars
+        run: |
+          echo "BUILD_DIR=build" >> $GITHUB_ENV
+          echo "DIST_DIR=dist" >> $GITHUB_ENV
+          FILE_LOC=$(find . -name info.py)
+          export VER="$(cat $FILE_LOC | grep -w version | awk -F'"' '$0=$2')"
+          export PROJ_NAME="$(cat $FILE_LOC | grep -w name | awk -F'"' '$0=$2')"
+          export PROJ_MOD="$(cat $FILE_LOC | grep -w module_name | awk -F'"' '$0=$2')"
+          export MAIN_FILE="$(cat $FILE_LOC | grep -w main_file | awk -F'"' '$0=$2')"
+          export MAIN_MOD="$(cat $FILE_LOC | grep -w main_module | awk -F'"' '$0=$2')"
+          export BUNDLE_ID="$(cat $FILE_LOC | grep -w bundle_identifier | awk -F'"' '$0=$2')"
+          echo "VER=$VER" >> $GITHUB_ENV
+          echo "PROJECT_NAME=$PROJ_NAME" >> $GITHUB_ENV
+          echo "PROJ_DIR=$PROJ_MOD" >> $GITHUB_ENV
+          echo "PROJ_MOD=$PROJ_MOD" >> $GITHUB_ENV
+          echo "MAIN_FILE=$MAIN_FILE" >> $GITHUB_ENV
+          echo "MAIN_MOD=$MAIN_MOD" >> $GITHUB_ENV
+          echo "BUNDLE_ID=$BUNDLE_ID" >> $GITHUB_ENV
+
+      - name: Check Python install
+        run: |
+          pip3 install --upgrade pip
+          python3 -m venv venv
+          source venv/bin/activate
+          which python3
+          python3 --version
+          which pip3
+          pip3 --version
+          file python3
+
+      - name: Install Python dependencies
+        run: |
+          source venv/bin/activate
+          pip3 install -U pip setuptools wheel pyclean
+          pip3 install -r requirements.txt
+          pip3 install py2app
+          PYINSTALLER_COMPILE_BOOTLOADER=1 MACOSX_DEPLOYMENT_TARGET=10.9 pip3 install https://github.com/pyinstaller/pyinstaller/tarball/develop --no-binary :all:
+
+      - name: Install universal2 dependencies
+        env:
+          CFLAGS: -arch x86_64 -arch arm64
+          ARCHFLAGS: -arch x86_64 -arch arm64
+        run: |
+          source venv/bin/activate
+          pip3 uninstall cffi -y
+          pip3 install --no-binary :all: cffi
+          pip3 uninstall cryptography -y
+          pip3 download --platform macosx_10_10_universal2 --only-binary :all: --no-deps --dest . cryptography
+          pip3 install --no-cache-dir --no-index --find-links . cryptography
+
+      - name: Check Python dependencies
+        run: |
+          source venv/bin/activate
+          python3 -c "from PySide6 import __version__; print(__version__)"
+          python3 -c "from PySide6.QtCore import __version__; print(__version__)"
+          python3 -c "from PySide6.QtCore import QLibraryInfo; print(QLibraryInfo.location(QLibraryInfo.LibrariesPath))"
+          python3 -c "import ssl; print(ssl)"
+          python3 -c "from py2app.recipes import pyside6"
+          python3 -c 'from distutils.sysconfig import get_config_var; print(get_config_var("LDLIBRARY"))'
+      - name: Build
+        run: |
+          source venv/bin/activate
+          python3 create_pyinstaller_file.py
+          # py2app works better
+          python3 buildPy2app.py py2app
+          # pyinstaller -w --noconfirm --hidden-import PySide6 \
+          #      --add-data "${{ env.PROJ_DIR }}/resources:." \
+          #      --icon "${{ env.PROJ_DIR }}/resources/icon.icns" \
+          #      --target-architecture universal2 \
+          #      --osx-bundle-identifier "${{ env.BUNDLE_ID }}" \
+          #      --hidden-import pkg_resources \
+          #      --distpath "${{ env.BUILD_DIR }}/ProjectMac" \
+          #      --onefile -n "${{ env.PROJECT_NAME }}" pyinstaller.py
+          mv "${{ env.DIST_DIR }}/${{ env.PROJECT_NAME }}.app" "${{ env.PROJECT_NAME }}.app"
+          # Clean the directory so it's not full of python bytecode
+          pyclean "${{ env.PROJECT_NAME }}.app"
+          python3 ci/cleandist.py "${{ env.PROJECT_NAME }}.app"
+          python3 ci/codesign.py "${{ env.PROJECT_NAME }}.app"
+          zip -ry "${{ env.PROJECT_NAME }}_${{ env.VER }}-macos-universal.zip" "${{ env.PROJECT_NAME }}.app"
+
+      - name: Prepare for deployment
+        run: |
+          source venv/bin/activate
+          mkdir -p "${{ env.DIST_DIR }}/dmg"
+          test -f "${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg" && rm "${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg"
+          mv "${{ env.PROJECT_NAME }}.app" "${{ env.DIST_DIR}}/dmg/"
+          create-dmg \
+            --volname "${{ env.PROJECT_NAME }}-${{ env.VER }} Installer" \
+            --volicon "${{ env.PROJ_DIR }}/resources/icon.icns" \
+            --window-pos 200 120 \
+            --window-size 800 400 \
+            --icon-size 100 \
+            --icon "${{ env.PROJECT_NAME }}.app" 200 190 \
+            --hide-extension "${{ env.PROJECT_NAME }}.app" \
+            --app-drop-link 600 185 \
+            "${{ env.PROJECT_NAME }}_${{ env.VER }}-universal.dmg" \
+            "${{ env.DIST_DIR }}/dmg/"
+          ls -al ${{ env.DIST_DIR }}
+
+      - name: Deploy Zip
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.PROJECT_NAME }}_${{ env.VER }}-${{ matrix.os }}-zip
+          path: |
+            ${{ env.PROJECT_NAME }}_${{ env.VER }}-macos-universal.zip
+
+      - name: Deploy DMG
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.PROJECT_NAME }}_${{ env.VER }}-${{ matrix.os}}-dmg
+          path: |
+            ${{ env.PROJECT_NAME }}_${{ env.VER }}-universal.dmg
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          generate_release_notes: true
+          files: |
+            ${{ env.PROJECT_NAME }}_${{ env.VER }}-universal.dmg
+            ${{ env.PROJECT_NAME }}_${{ env.VER }}-macos-universal.zip

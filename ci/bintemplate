@@ -1,0 +1,3 @@
+#!/bin/bash
+
+/usr/bin/$PROJ_MOD-bin/$PROJ_MOD "$@"
