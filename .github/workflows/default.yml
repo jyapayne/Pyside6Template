@@ -27,7 +27,7 @@ jobs:
 
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.10.8'
+          python-version: '3.11.4'
 
       - name: Install prereqs
         run: |
@@ -147,7 +147,7 @@ jobs:
 
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.10.8'
+          python-version: '3.11.4'
 
       - name: Check Python install
         run: |
@@ -236,9 +236,9 @@ jobs:
           brew install create-dmg
       - name: Setup Python
         run: |
-          wget https://www.python.org/ftp/python/3.10.8/python-3.10.8-macos11.pkg
+          wget https://www.python.org/ftp/python/3.11.4/python-3.11.4-macos11.pkg
           sudo installer -verbose -pkg ./python-3*.pkg -target /
-          echo "/Library/Frameworks/Python.framework/Versions/3.10/bin" >> $GITHUB_PATH
+          echo "/Library/Frameworks/Python.framework/Versions/3.11/bin" >> $GITHUB_PATH
       - name: Setup Env Vars
         run: |
           echo "BUILD_DIR=build" >> $GITHUB_ENV
