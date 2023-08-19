@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "pyside6template"
+version = "0.1.0"
+description = ""
+authors = ["Joey Yakimowich-Payne <jyapayne@pm.me>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+pyside6 = "^6.5.2"
+certifi = "^2023.7.22"
+
+[tool.poetry.group.dev.dependencies]
+setuptools = "^68.1.2"
+wheel = "^0.41.1"
+py2app = "^0.28.6"
+pillow = "^10.0.0"
+pre-commit = "^3.3.3"
+black = "^23.7.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

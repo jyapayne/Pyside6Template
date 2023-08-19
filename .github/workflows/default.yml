@@ -32,9 +32,11 @@ jobs:
       - name: Install prereqs
         run: |
           sudo apt install -y libegl-dev libxcb-keysyms1 libxcb-randr0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-shape0 libxcb-xkb1 libxcb-render-util0
+          curl -sSL https://install.python-poetry.org | python3 -
 
       - name: Setup Env Vars
         run: |
+          export PATH="$HOME/.local/bin:$PATH"
           echo "BUILD_DIR=build" >> $GITHUB_ENV
           echo "DIST_DIR=dist" >> $GITHUB_ENV
           FILE_LOC=$(find . -name info.py)
@@ -59,27 +61,21 @@ jobs:
 
       - name: Check Python install
         run: |
-          pip3 install --upgrade pip
-          python3 -m venv venv
-          source venv/bin/activate
+          poetry self update
+          poetry shell
 
           which python3
           python3 --version
-          which pip3
-          pip3 --version
           file python3
 
       - name: Install Python dependencies
         run: |
-          source venv/bin/activate
-          pip3 install -U pip setuptools wheel certifi
-          pip3 install -r requirements.txt
-          pip3 install py2app
-          PYINSTALLER_COMPILE_BOOTLOADER=1 MACOSX_DEPLOYMENT_TARGET=10.9 pip3 install https://github.com/pyinstaller/pyinstaller/tarball/develop --no-binary :all:
+          poetry install
+          PYINSTALLER_COMPILE_BOOTLOADER=1 MACOSX_DEPLOYMENT_TARGET=10.9 poetry run pip3 install https://github.com/pyinstaller/pyinstaller/tarball/develop --no-binary :all:
 
       - name: Check Python dependencies
         run: |
-          source venv/bin/activate
+          poetry shell
           python3 -c "from PySide6 import __version__; print(__version__)"
           python3 -c "from PySide6.QtCore import __version__; print(__version__)"
           python3 -c "from PySide6.QtCore import QLibraryInfo; print(QLibraryInfo.location(QLibraryInfo.LibrariesPath))"
@@ -89,7 +85,7 @@ jobs:
 
       - name: Setup Deb
         run: |
-          source venv/bin/activate
+          poetry shell
           python3 create_pyinstaller_file.py
           pyinstaller -w --noconfirm --hidden-import PySide6 \
                --add-data "${{ env.PROJ_DIR }}/resources:." \
@@ -151,8 +147,9 @@ jobs:
 
       - name: Check Python install
         run: |
-          python -m venv venv
-          venv\Scripts\Activate.ps1
+          (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
+          poetry self update
+          poetry shell
           which python
           python --version
           python -c "import struct; print(struct.calcsize('P') * 8)"
@@ -161,14 +158,13 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          venv\Scripts\Activate.ps1
-          pip install -U setuptools wheel pip pillow
-          pip install -r requirements.txt
-          pip install https://github.com/pyinstaller/pyinstaller/tarball/develop
+          poetry self update
+          poetry install
+          poetry run pip install https://github.com/pyinstaller/pyinstaller/tarball/develop
 
       - name: Check Python dependencies
         run: |
-          venv\Scripts\Activate.ps1
+          poetry shell
           python -c "from PySide6 import __version__; print(__version__)"
           python -c "from PySide6.QtCore import __version__; print(__version__)"
           python -c "from PySide6.QtCore import QLibraryInfo; print(QLibraryInfo.location(QLibraryInfo.LibrariesPath))"
@@ -192,7 +188,7 @@ jobs:
 
       - name: Build
         run: |
-          venv\Scripts\Activate.ps1
+          poetry shell
           python create_pyinstaller_file.py
           pyinstaller -w --noconfirm --hidden-import PySide6 `
                --add-data "${{ env.PROJ_DIR }}\resources;." `
@@ -229,7 +225,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        
+
       - name: Setup Homebrew
         run: |
           NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -239,8 +235,10 @@ jobs:
           wget https://www.python.org/ftp/python/3.11.4/python-3.11.4-macos11.pkg
           sudo installer -verbose -pkg ./python-3*.pkg -target /
           echo "/Library/Frameworks/Python.framework/Versions/3.11/bin" >> $GITHUB_PATH
+          curl -sSL https://install.python-poetry.org | python3 -
       - name: Setup Env Vars
         run: |
+          export PATH="$HOME/.local/bin:$PATH"
           echo "BUILD_DIR=build" >> $GITHUB_ENV
           echo "DIST_DIR=dist" >> $GITHUB_ENV
           FILE_LOC=$(find . -name info.py)
@@ -260,9 +258,8 @@ jobs:
 
       - name: Check Python install
         run: |
-          pip3 install --upgrade pip
-          python3 -m venv venv
-          source venv/bin/activate
+          poetry self update
+          poetry shell
           which python3
           python3 --version
           which pip3
@@ -271,27 +268,25 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          source venv/bin/activate
-          pip3 install -U pip setuptools wheel pyclean
-          pip3 install -r requirements.txt
-          pip3 install py2app
-          PYINSTALLER_COMPILE_BOOTLOADER=1 MACOSX_DEPLOYMENT_TARGET=10.9 pip3 install https://github.com/pyinstaller/pyinstaller/tarball/develop --no-binary :all:
+          poetry add py2app pyclean --group dev
+          poetry install
+          PYINSTALLER_COMPILE_BOOTLOADER=1 MACOSX_DEPLOYMENT_TARGET=10.9 poetry run pip3 install https://github.com/pyinstaller/pyinstaller/tarball/develop --no-binary :all:
 
       - name: Install universal2 dependencies
         env:
           CFLAGS: -arch x86_64 -arch arm64
           ARCHFLAGS: -arch x86_64 -arch arm64
         run: |
-          source venv/bin/activate
-          pip3 uninstall cffi -y
-          pip3 install --no-binary :all: cffi
-          pip3 uninstall cryptography -y
-          pip3 download --platform macosx_10_10_universal2 --only-binary :all: --no-deps --dest . cryptography
-          pip3 install --no-cache-dir --no-index --find-links . cryptography
+          poetry shell
+          poetry run pip3 uninstall cffi -y
+          poetry run pip3 install --no-binary :all: cffi
+          poetry run pip3 uninstall cryptography -y
+          poetry run pip3 download --platform macosx_10_10_universal2 --only-binary :all: --no-deps --dest . cryptography
+          poetry run pip3 install --no-cache-dir --no-index --find-links . cryptography
 
       - name: Check Python dependencies
         run: |
-          source venv/bin/activate
+          poetry shell
           python3 -c "from PySide6 import __version__; print(__version__)"
           python3 -c "from PySide6.QtCore import __version__; print(__version__)"
           python3 -c "from PySide6.QtCore import QLibraryInfo; print(QLibraryInfo.location(QLibraryInfo.LibrariesPath))"
@@ -300,7 +295,7 @@ jobs:
           python3 -c 'from distutils.sysconfig import get_config_var; print(get_config_var("LDLIBRARY"))'
       - name: Build
         run: |
-          source venv/bin/activate
+          poetry shell
           python3 create_pyinstaller_file.py
           # py2app works better
           python3 buildPy2app.py py2app
@@ -321,7 +316,7 @@ jobs:
 
       - name: Prepare for deployment
         run: |
-          source venv/bin/activate
+          poetry shell
           mkdir -p "${{ env.DIST_DIR }}/dmg"
           test -f "${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg" && rm "${{ env.PROJECT_NAME }}_${{ env.VER }}.dmg"
           mv "${{ env.PROJECT_NAME }}.app" "${{ env.DIST_DIR}}/dmg/"
